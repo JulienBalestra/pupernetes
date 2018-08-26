@@ -141,6 +141,66 @@ Restart=no
 `),
 		},
 		{
+			Name:        "nginx.service",
+			Destination: ManifestSystemdUnit,
+			Content: []byte(`[Unit]
+Description=nginx for pupernetes
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/docker run --rm --net=host \
+	-v {{.RootABSPath}}/manifest-config/nginx.conf:/etc/nginx/nginx.conf:ro \
+	-v {{.RootABSPath}}/secrets:/etc/secrets:ro \
+	nginx:latest
+
+Restart=no
+`),
+		},
+		{
+			Name:        "nginx.conf",
+			Destination: ManifestConfig,
+			Content: []byte(`
+events {
+    worker_connections  1024;
+}
+
+http {
+    proxy_cache_path /var/lib/nginx levels=1:2 keys_zone=kubernetes:1m
+    inactive=10m max_size=1g;
+
+    server {
+            listen                 443 ssl;
+            server_name            kube-nginx;
+            ssl_certificate        /etc/secrets/kubernetes.certificate;
+            ssl_certificate_key    /etc/secrets/kubernetes.private_key;
+	
+			set_real_ip_from 0.0.0.0/0;
+			real_ip_header X-Real-IP;
+			real_ip_recursive on;
+
+        location / {
+            proxy_pass                https://127.0.0.1:6443;
+            proxy_ssl_certificate     /etc/secrets/kubernetes.certificate;
+            proxy_ssl_certificate_key /etc/secrets/kubernetes.private_key;
+
+            proxy_cache_key           $uri$is_args$args;
+
+            proxy_cache_lock       on;
+            proxy_cache_lock_age   3s;
+            proxy_set_header       Host $host;
+            proxy_buffering        on;
+            proxy_cache            kubernetes;
+            proxy_cache_min_uses   1;
+            proxy_cache_valid      200  1s;
+            proxy_cache_valid      404  5s;
+            proxy_cache_use_stale  error timeout invalid_header updating
+                                   http_500 http_502 http_503 http_504;
+        }
+    }
+}
+`),
+		},
+		{
 			Name:        "kubeconfig-auth.yaml",
 			Destination: ManifestConfig,
 			Content: []byte(`---

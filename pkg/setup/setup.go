@@ -300,7 +300,7 @@ func NewConfigSetup(givenRootPath string) (*Environment, error) {
 		ContainerRuntimeEndpoint = "/run/containerd/containerd.sock"
 		e.systemdUnitNames = append(e.systemdUnitNames, fmt.Sprintf("%s%s.service", e.systemdUnitPrefix, e.containerRuntimeInterface))
 	}
-	e.systemdUnitNames = append(e.systemdUnitNames, e.etcdUnitName, e.kubeAPIServerUnitName, e.kubeletUnitName)
+	e.systemdUnitNames = append(e.systemdUnitNames, e.etcdUnitName, e.kubeAPIServerUnitName, e.systemdUnitPrefix+"nginx.service", e.kubeletUnitName)
 
 	// Template for manifests
 	e.templateMetadata = &templateMetadata{
